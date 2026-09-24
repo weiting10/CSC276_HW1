@@ -6,7 +6,7 @@
  
 #define SAMPLES   1000
 #define BUF_SIZE  4096   // one page is plenty for L1/DRAM
-#define EVICT_BUF_SIZE 46137344   // double the size of L2 Dcache
+#define EVICT_BUF_SIZE 2097152   // double the size of L2 Dcache
 
 
 int main(void)
