@@ -46,7 +46,13 @@ int main(void)
  
         maccess(target);            // bring it into L1 (it already is, but be sure)
         asm volatile("mfence");
-	maccess(evict_buf);
+
+	for (int i=0; i < EVICT_BUF_SIZE; i += 64){
+		maccess(evict_buf+i);
+	}
+	
+	
+	
 	asm volatile("mfence");
         l3_latency[i] = memaccesstime(target);
  
