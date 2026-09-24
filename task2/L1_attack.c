@@ -4,7 +4,7 @@
 #include "mem_utils.h"
 
 #define SAMPLES   1000
-#define BUF_SIZE  32768   // one page is plenty for L1/DRAM
+#define BUF_SIZE  4096   // one page is plenty for L1/DRAM
  
 int main(void)
 {
