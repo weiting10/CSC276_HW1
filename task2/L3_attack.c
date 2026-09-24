@@ -47,10 +47,11 @@ int main(void)
         maccess(target);            // bring it into L1 (it already is, but be sure)
         asm volatile("mfence");
 
-	for (int i=0; i < EVICT_BUF_SIZE; i += 64){
-		maccess(evict_buf+i);
+	for (int rep=0; rep < 3 ; rep++){
+		for (int i=0; i < EVICT_BUF_SIZE; i += 64){
+			maccess(evict_buf+i);
+		}
 	}
-	
 	
 	
 	asm volatile("mfence");
