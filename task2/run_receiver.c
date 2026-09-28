@@ -29,11 +29,15 @@
 #define IDX_ACK 9
 #define N_LINES 10
 #define ASSERT_REPS 4
+#define THRESHOLD 136
 
 static uint8_t *g_base;
 
+// This function takes in the index input, and output the memory address of that index;
+// 0-7 is for the 8 bits of binary code of the letters; and 8 and 9th bits are for REQ and ACK
 static inline uint8_t *line(int idx) { return g_base + (size_t)idx * STRIDE; }
 
+// ?????????
 static inline void set_line(int idx) {
     uint8_t *p = line(idx);
     for (int k = 0; k < ASSERT_REPS; k++) maccess(p);
@@ -45,6 +49,8 @@ static inline int is_cached(int idx, uint32_t threshold) {
 }
 
 // Poll REQ (flush + time) until the sender is observed touching it.
+// This function will repeatedly flushing and accessing the "REQ" index; if it sees the "REQ" is accessed/latency < threshold, then 
+// it will return and exit this function and move on
 static void wait_req(uint32_t threshold) {
     uint8_t *p = line(IDX_REQ);
     for (;;) {
@@ -53,6 +59,8 @@ static void wait_req(uint32_t threshold) {
         if (memaccesstime(p) < threshold) return;
     }
 }
+
+/*
 
 static uint32_t calibrate(void) {
     uint8_t *p = line(0);
@@ -73,6 +81,9 @@ static uint32_t calibrate(void) {
     return (h + m) / 2;
 }
 
+*/
+
+
 // Receive one byte using the round protocol above.
 static uint8_t recv_byte(uint32_t threshold) {
     // 1. Reset the wire.
@@ -85,6 +96,8 @@ static uint8_t recv_byte(uint32_t threshold) {
 
     // 3. Sample the 8 data lines. The sender keeps re-touching REQ and its
     //    1-bits while waiting for our ACK, so the bits are hot right now.
+    // Initialize b = 0 , and go through each of the 8 bits; for the bits that is cached, the functions turns the corresponding bit
+    // in b to 1
     uint8_t b = 0;
     for (int i = 0; i < N_DATA; i++)
         if (is_cached(i, threshold)) b |= (1u << i);
@@ -92,17 +105,21 @@ static uint8_t recv_byte(uint32_t threshold) {
     // 4. Acknowledge: assert ACK until the sender stops asserting REQ.
     uint8_t *req = line(IDX_REQ);
     for (;;) {
-        set_line(IDX_ACK);
-        flush(req);
+        set_line(IDX_ACK);    // This will access the IDX_ACK multiple times
+        flush(req);           // kick req back to DRAM
         for (volatile int d = 0; d < 50; d++) {}
-        if (memaccesstime(req) >= threshold) break;  // sender dropped REQ
+        if (memaccesstime(req) >= threshold) break;  // The sender will repeatedly hammer REQ until it receives the ACK; if req is 
+        // still in the cache after "flush(req)", then we know the sender hasn't received ACK yet.
     }
     return b;
 }
 
 int main(void) {
+    // open the file in "fd"
     int fd = open(PATH, O_RDONLY);
     if (fd < 0) { perror("open"); return 1; }
+
+    // make sure the file is big enough/ greater than 10 cache line size
     struct stat st;
     if (fstat(fd, &st) < 0) { perror("fstat"); return 1; }
     if ((size_t)st.st_size < (size_t)N_LINES * STRIDE) {
@@ -110,10 +127,12 @@ int main(void) {
                 N_LINES * STRIDE, (long)st.st_size);
         return 1;
     }
+
+    // map the file into memory
     g_base = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
     if (g_base == MAP_FAILED) { perror("mmap"); return 1; }
 
-    uint32_t threshold = calibrate();
+    uint32_t threshold = THRESHOLD;
 
     printf("Please press enter.\n");
     fflush(stdout);
@@ -122,6 +141,7 @@ int main(void) {
     fflush(stdout);
 
     // Frame: 4-byte little-endian length, then that many payload bytes.
+    // this makes arbitrary length possible
     uint32_t len = 0;
     for (int i = 0; i < 4; i++)
         len |= ((uint32_t)recv_byte(threshold)) << (8 * i);
@@ -132,9 +152,10 @@ int main(void) {
         return 1;
     }
 
+    
     for (uint32_t i = 0; i < len; i++) {
         uint8_t c = recv_byte(threshold);
-        putchar(c);
+        putchar(c);      // print the character on the screen 
     }
     putchar('\n');
     fflush(stdout);
