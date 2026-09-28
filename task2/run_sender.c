@@ -37,6 +37,7 @@
 #define IDX_REQ  8
 #define IDX_ACK  9
 #define N_LINES  10           // file must be >= N_LINES * STRIDE bytes
+#define THRESHOLD 136
 
 // How many times to touch a line when asserting a signal. Touching once
 // races with the receiver's flush; a short burst makes detection reliable.
@@ -68,6 +69,7 @@ static void wait_until_cached(int idx, uint32_t threshold) {
 // Poll a line until it is observed FLUSHED/absent (slow). Used to wait for
 // the receiver to DROP its ACK before we start the next round, so one round's
 // ACK can't be mistaken for the next round's.
+// wait until receiver stop hitting "ACK"
 static void wait_until_absent(int idx, uint32_t threshold) {
     uint8_t *p = line(idx);
     int misses = 0;
@@ -81,6 +83,7 @@ static void wait_until_absent(int idx, uint32_t threshold) {
     }
 }
 
+/*
 // Measure a hit/miss threshold at startup: midpoint of a cached access and a
 // flushed access to one of our own lines. Matches the Task-2 L3-vs-DRAM gap.
 static uint32_t calibrate(void) {
@@ -101,6 +104,8 @@ static uint32_t calibrate(void) {
     fprintf(stderr, "[sender] hit~%u miss~%u threshold=%u\n", h, m, (h + m) / 2);
     return (h + m) / 2;
 }
+
+*/
 
 // Send one byte: set data lines for 1-bits, strobe REQ, wait for ACK, then
 // wait for ACK to drop so the next round starts clean.
