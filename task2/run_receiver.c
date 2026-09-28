@@ -91,8 +91,14 @@ static uint8_t recv_byte(uint32_t threshold) {
     flush(line(IDX_REQ));
     asm volatile("mfence");
 
+    fprintf(stderr, "[recv] waiting for REQ...\n");
+    fflush(stderr);  // <-- force it to appear immediately
+
     // 2. Wait for the sender's REQ strobe.
     wait_req(threshold);
+
+    fprintf(stderr, "[recv] got REQ! reading bits...\n");
+    fflush(stderr);
 
     // 3. Sample the 8 data lines. The sender keeps re-touching REQ and its
     //    1-bits while waiting for our ACK, so the bits are hot right now.
@@ -101,6 +107,11 @@ static uint8_t recv_byte(uint32_t threshold) {
     uint8_t b = 0;
     for (int i = 0; i < N_DATA; i++)
         if (is_cached(i, threshold)) b |= (1u << i);
+
+    fprintf(stderr, "[recv] byte = 0x%02x ('%c')\n",
+            b, (b >= 32 && b < 127) ? b : '?');   // <-- ADD
+    fflush(stderr);
+
 
     // 4. Acknowledge: assert ACK until the sender stops asserting REQ.
     uint8_t *req = line(IDX_REQ);
@@ -143,9 +154,15 @@ int main(void) {
     // Frame: 4-byte little-endian length, then that many payload bytes.
     // this makes arbitrary length possible
     uint32_t len = 0;
-    for (int i = 0; i < 4; i++)
-        len |= ((uint32_t)recv_byte(threshold)) << (8 * i);
+    for (int i = 0; i < 4; i++){
+        uint8_t lb = recv_byte(threshold);
+        fprintf(stderr, "[recv] length byte %d = %u\n", i, lb);   // <-- ADD
+        len |= ((uint32_t)lb) << (8 * i);
+    }
 
+    fprintf(stderr, "[recv] decoded length = %u\n", len);          // <-- ADD
+    fflush(stderr);
+	
     // Sanity clamp so a corrupted length can't make us loop forever.
     if (len > 1u << 20) {
         fprintf(stderr, "[receiver] bad length %u, aborting\n", len);
