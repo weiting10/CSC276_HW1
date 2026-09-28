@@ -34,9 +34,10 @@ int main(void)
     }
  
     printf("l1\n");
-    for (int i = 0; i < SAMPLES; i++)
-        printf("%u\n", l1_latency[i]);
- 
+    for (int i = 0; i < SAMPLES; i++){
+	printf("%u\n", l1_latency[i]);
+    }
+
     free(buf);
     return 0;
 }

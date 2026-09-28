@@ -4,20 +4,20 @@
 #include <stdint.h>
 #include "mem_utils.h"   // put mem_utils.h in the same folder (or use -I)
  
-#define SAMPLES   1000
-#define BUF_SIZE  4096   // one page is plenty for L1/DRAM
+#define SAMPLES   1000 //project req
+#define BUF_SIZE  4096   // one page, defined by csug machine "getconfig {AGESIZE" is plenty for L1/DRAM
 #define EVICT_BUF_SIZE 65536   // double the size of L1 Dcache
 
 
 int main(void)
 {
-    uint8_t *buf = malloc(BUF_SIZE);
+    uint8_t *buf = malloc(BUF_SIZE); //checking that BUF_SIZE is allocated to buf, else flag, original buf to access
     if (buf == NULL) {
         perror("malloc");
         return 1;
     }
 
-    uint8_t *evict_buf = malloc(EVICT_BUF_SIZE);
+    uint8_t *evict_buf = malloc(EVICT_BUF_SIZE); //buffer to evict original
     if (evict_buf == NULL) {
         perror("malloc");
         return 1;
@@ -53,7 +53,7 @@ int main(void)
 		}
 	}
 	
-	asm volatile("mfence");
+        asm volatile("mfence");
         l2_latency[i] = memaccesstime(target);
  
     }
