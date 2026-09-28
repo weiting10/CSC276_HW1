@@ -146,7 +146,7 @@ int main(void) {
     g_base = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
     if (g_base == MAP_FAILED) { perror("mmap"); return 1; }
 
-    uint32_t threshold = calibrate();
+    uint32_t threshold = THRESHOLD;
 
     printf("Please type a message.\n");
     fflush(stdout);
